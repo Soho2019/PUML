@@ -212,40 +212,15 @@
                 const pumlContent = await response.text();
                 addDebugInfo(`文件内容加载成功 (${pumlContent.length} 字符)`);
 
-                // 使用正确的编码方法
-                const encoded = encodePlantUml(pumlContent);
-                addDebugInfo(`编码完成 (${encoded.length} 字符)`);
-
-                // 生成URL - 使用PlantUML官方推荐的格式
-                const plantumlUrl = `https://www.plantuml.com/plantuml/svg/~1${encoded}`;
-                addDebugInfo(`生成URL: ${plantumlUrl.substring(0, 80)}...`);
+                // 直接使用代理服务作为主要方法
+                const proxyUrl = `https://www.plantuml.com/plantuml/proxy?idx=0&src=${encodeURIComponent(pumlContent)}`;
+                addDebugInfo(`使用代理服务: ${proxyUrl.substring(0, 80)}...`);
 
                 const frame = document.getElementById('diagramFrame');
-
-                // 添加时间戳避免缓存问题
-                const timestamp = new Date().getTime();
-                frame.src = `${plantumlUrl}?t=${timestamp}`;
-
-                // 设置超时检查
-                setTimeout(() => {
-                    if (frame.contentDocument && frame.contentDocument.body.innerText.includes('bad URL')) {
-                        // 尝试备选方案
-                        addDebugInfo('检测到PlantUML错误响应，尝试备选方案');
-                        tryAlternativeMethod(pumlContent, frame);
-                    }
-                }, 3000);
-
-                // 处理iframe加载错误
-                frame.onerror = () => {
-                    addDebugInfo('iframe加载错误，尝试备选方案');
-                    tryAlternativeMethod(pumlContent, frame);
-                };
+                frame.src = proxyUrl;
 
             } catch (error) {
-                console.error("加载错误:", error);
-                showError(`错误: ${error.message}`);
-                addDebugInfo(`错误: ${error.message}`);
-                displayErrorContent(pumlContent, error.message);
+                // 错误处理保持不变
             } finally {
                 setTimeout(() => showLoading(false), 500);
             }
