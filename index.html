@@ -2,8 +2,9 @@
 <html>
 
 <head>
-    <title>流程图查看器</title>
-    <script src="https://cdn.jsdelivr.net/npm/puml-encoder@1.4.0/dist/puml-encoder.min.js"></script>
+    <title>视频拍摄流程</title>
+    <!-- 使用本地 puml-encoder 避免 CDN 问题 -->
+    <script src="puml-encoder.min.js"></script>
     <style>
         iframe {
             border: none;
@@ -13,12 +14,18 @@
 
         .nav {
             margin: 15px;
+            padding: 10px;
+            background: #f5f5f5;
         }
 
         button {
             margin: 5px;
             padding: 8px 15px;
             cursor: pointer;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -37,7 +44,7 @@
         <button onclick="loadDiagram('approval.puml')">子流程-视频审批</button>
         <button onclick="loadDiagram('publishing.puml')">子流程-视频上传发布</button>
     </div>
-    <iframe id="diagramFrame"></iframe>
+    <iframe id="diagramFrame" title="流程图"></iframe>
 
     <script>
         // 初始化加载主流程图
@@ -45,9 +52,12 @@
 
         async function loadDiagram(pumlFile) {
             try {
+                const frame = document.getElementById('diagramFrame');
+                frame.srcdoc = `<html><body style="margin:0"><p>加载中...</p></body></html>`;
+
                 // 1. 获取PUML文件内容
                 const response = await fetch(pumlFile);
-                if (!response.ok) throw new Error("文件加载失败");
+                if (!response.ok) throw new Error(`文件 ${pumlFile} 加载失败`);
 
                 // 2. 读取文本内容
                 const pumlContent = await response.text();
@@ -56,12 +66,11 @@
                 const encoded = pumlEncoder.encode(pumlContent);
 
                 // 4. 生成正确URL
-                const frame = document.getElementById('diagramFrame');
                 frame.src = `https://www.plantuml.com/plantuml/svg/~1${encoded}`;
 
             } catch (error) {
                 console.error("加载错误:", error);
-                alert(`加载失败: ${error.message}`);
+                alert(`错误: ${error.message}\n请检查文件名和网络连接`);
             }
         }
     </script>
