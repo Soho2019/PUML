@@ -1,5 +1,4 @@
 @startuml approval.puml
-!include main.puml
 
 title 视频审批详细流程
 

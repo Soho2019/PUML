@@ -1,5 +1,4 @@
 @startuml material_org.puml
-!include main.puml
 
 title 素材整理详细流程
 

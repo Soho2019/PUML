@@ -1,5 +1,4 @@
 @startuml scene_prep.puml
-!include main.puml
 
 title 布景准备详细流程
 

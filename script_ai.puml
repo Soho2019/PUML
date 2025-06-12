@@ -1,5 +1,4 @@
 @startuml script_ai.puml
-!include main.puml
 
 title 脚本编写AI详细流程
 

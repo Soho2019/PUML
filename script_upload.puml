@@ -1,5 +1,4 @@
 @startuml script_upload.puml
-!include main.puml
 
 title 脚本上传详细流程
 

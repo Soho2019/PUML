@@ -1,5 +1,4 @@
 @startuml shooting_prep.puml
-!include main.puml
 
 title 拍摄准备详细流程
 

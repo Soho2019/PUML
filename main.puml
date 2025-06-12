@@ -18,39 +18,30 @@ start
 
 partition "前期准备" {
   :脚本编写AI;
-  note right: [[./script_ai.puml 查看详细流程]]
   
   :脚本上传;
-  note right: [[./script_upload.puml 查看详细流程]]
 }
 
 partition "拍摄准备" {
   :布景准备;
-  note right: [[./scene_prep.puml 查看详细流程]]
   
   :拍摄准备;
-  note right: [[./shooting_prep.puml 查看详细流程]]
 }
 
 partition "拍摄执行" {
   :视频拍摄;
-  note right: [[./shooting.puml 查看详细流程]]
   
   :素材整理;
-  note right: [[./material_org.puml 查看详细流程]]
 }
 
 partition "后期制作" {
   :视频剪辑;
-  note right: [[./editing.puml 查看详细流程]]
   
   :视频审批;
-  note right: [[./approval.puml 查看详细流程]]
 }
 
 partition "发布" {
   :视频上传发布;
-  note right: [[./publishing.puml 查看详细流程]]
 }
 
 stop

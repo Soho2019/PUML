@@ -1,5 +1,4 @@
 @startuml publishing.puml
-!include main.puml
 
 title 视频上传发布详细流程
 

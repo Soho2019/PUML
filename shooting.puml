@@ -1,5 +1,4 @@
 @startuml shooting.puml
-!include main.puml
 
 title 视频拍摄详细流程
 
