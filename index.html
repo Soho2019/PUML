@@ -143,12 +143,6 @@
             document.getElementById('error').style.display = 'none';
         }
 
-        // 切换调试面板
-        function toggleDebug() {
-            const panel = document.getElementById('debugPanel');
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-        }
-
         // 添加调试信息
         function addDebugInfo(info) {
             const debugContent = document.getElementById('debugContent');
@@ -158,45 +152,6 @@
 
         // 初始化加载主流程图
         window.onload = () => loadDiagram('main.puml');
-
-        // 使用 PlantUML 官方推荐的编码函数（修正版）
-        function encodePlantUml(text) {
-            // PlantUML 官方编码函数
-            function encode6bit(b) {
-                if (b < 10) return String.fromCharCode(48 + b);
-                b -= 10;
-                if (b < 26) return String.fromCharCode(65 + b);
-                b -= 26;
-                if (b < 26) return String.fromCharCode(97 + b);
-                b -= 26;
-                if (b === 0) return '-';
-                if (b === 1) return '_';
-                return '?';
-            }
-
-            let r = "";
-            for (let i = 0; i < text.length; i += 3) {
-                if (i + 2 === text.length) {
-                    r += append3bytes(text.charCodeAt(i), text.charCodeAt(i + 1), 0);
-                } else if (i + 1 === text.length) {
-                    r += append3bytes(text.charCodeAt(i), 0, 0);
-                } else {
-                    r += append3bytes(text.charCodeAt(i), text.charCodeAt(i + 1), text.charCodeAt(i + 2));
-                }
-            }
-            return r;
-
-            function append3bytes(b1, b2, b3) {
-                const c1 = b1 >> 2;
-                const c2 = ((b1 & 0x3) << 4) | (b2 >> 4);
-                const c3 = ((b2 & 0xF) << 2) | (b3 >> 6);
-                const c4 = b3 & 0x3F;
-                return encode6bit(c1 & 0x3F) +
-                    encode6bit(c2 & 0x3F) +
-                    encode6bit(c3 & 0x3F) +
-                    encode6bit(c4 & 0x3F);
-            }
-        }
 
         async function loadDiagram(pumlFile) {
             showLoading(true);
@@ -212,47 +167,56 @@
                 const pumlContent = await response.text();
                 addDebugInfo(`文件内容加载成功 (${pumlContent.length} 字符)`);
 
-                // 直接使用代理服务作为主要方法
+                // 1. 检查PUML文件是否有效
+                if (!isValidPuml(pumlContent)) {
+                    throw new Error('PUML文件格式无效');
+                }
+
+                // 2. 使用代理服务
                 const proxyUrl = `https://www.plantuml.com/plantuml/proxy?idx=0&src=${encodeURIComponent(pumlContent)}`;
                 addDebugInfo(`使用代理服务: ${proxyUrl.substring(0, 80)}...`);
 
                 const frame = document.getElementById('diagramFrame');
-                frame.src = proxyUrl;
+
+                // 3. 添加时间戳避免缓存问题
+                const timestamp = new Date().getTime();
+                frame.src = `${proxyUrl}&t=${timestamp}`;
+
+                // 4. 设置超时检查
+                setTimeout(() => {
+                    checkDiagramLoad(frame, pumlContent);
+                }, 3000);
 
             } catch (error) {
-                // 错误处理保持不变
-            } finally {
-                setTimeout(() => showLoading(false), 500);
+                console.error("加载错误:", error);
+                showError(`错误: ${error.message}`);
+                addDebugInfo(`错误: ${error.message}`);
+                displayErrorContent(pumlContent, error.message);
+                showLoading(false);
             }
         }
 
-        // 备选方案：当主方法失败时使用
-        function tryAlternativeMethod(pumlContent, frame) {
-            addDebugInfo('尝试备选方案：文本模式');
-            showError('主方法失败，尝试备选方案...');
-
-            // 方法1：使用文本模式
-            const textModeUrl = `https://www.plantuml.com/plantuml/svg/~0${encodeURIComponent(pumlContent)}`;
-            frame.src = textModeUrl + '?t=' + new Date().getTime();
-
-            // 设置二次检查
-            setTimeout(() => {
-                if (frame.contentDocument && frame.contentDocument.body.innerText.includes('bad URL')) {
-                    addDebugInfo('文本模式失败，尝试代理方法');
-
-                    // 方法2：使用代理服务
-                    const proxyUrl = `https://www.plantuml.com/plantuml/proxy?idx=0&src=${encodeURIComponent(pumlContent)}`;
-                    frame.src = proxyUrl;
-
-                    // 最终检查
-                    setTimeout(() => {
-                        if (frame.contentDocument && frame.contentDocument.body.innerText.includes('bad URL')) {
-                            showError('所有方法均失败，请检查PUML语法');
-                            displayErrorContent(pumlContent, '所有方法均失败');
-                        }
-                    }, 3000);
+        // 检查图表是否成功加载
+        function checkDiagramLoad(frame, pumlContent) {
+            try {
+                if (frame.contentDocument &&
+                    (frame.contentDocument.body.innerText.includes('PlantUML') ||
+                        frame.contentDocument.body.innerText.includes('diagram'))) {
+                    showError('PlantUML无法渲染此文件，请检查语法');
+                    addDebugInfo('检测到PlantUML默认页面');
+                    displayErrorContent(pumlContent, 'PlantUML渲染失败');
                 }
-            }, 3000);
+            } catch (e) {
+                // 跨域错误处理
+                addDebugInfo('无法访问iframe内容（跨域限制）');
+            }
+
+            showLoading(false);
+        }
+
+        // 检查PUML文件是否有效
+        function isValidPuml(content) {
+            return content.includes('@startuml') && content.includes('@enduml');
         }
 
         // 显示错误内容
