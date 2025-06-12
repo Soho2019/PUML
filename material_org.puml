@@ -1,0 +1,36 @@
+@startuml material_org.puml
+!include main.puml
+
+title 素材整理详细流程
+
+start
+
+:选择成员;
+note right: 负责人：素材整理负责人
+
+:接收拍摄素材;
+:创建命名规范;
+
+partition "素材检查" {
+  :检查素材完整性;
+  if (有缺镜头?) then (是)
+    :标记缺失;
+    :通知补拍;
+  endif
+  
+  if (有损坏/花屏?) then (是)
+    :标记问题素材;
+    :通知重拍;
+  endif
+}
+
+:分类整理素材;
+:添加元数据标签;
+:转码统一格式;
+:备份素材;
+
+:设置阶段完成时间;
+
+stop
+
+@enduml

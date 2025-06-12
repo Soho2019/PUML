@@ -1,0 +1,36 @@
+@startuml shooting_prep.puml
+!include main.puml
+
+title 拍摄准备详细流程
+
+start
+
+:选择成员;
+note right: 负责人：拍摄准备负责人
+
+:准备设备清单;
+note: 包括备用设备
+
+:确认设备状态;
+:设置拍摄比例;
+
+partition "平台适配" {
+  :选择目标平台;
+  :分析平台调性;
+  :调整拍摄方案;
+}
+
+:创建镜头顺序表;
+note: 标注每镜头内容和演示重点
+
+if (准备完成?) then (是)
+  :通知拍摄团队;
+else (否)
+  :补充准备;
+endif
+
+:设置阶段完成时间;
+
+stop
+
+@enduml
