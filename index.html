@@ -90,6 +90,7 @@
             background: #5a6268;
         }
     </style>
+</head>
 
 <body>
     <h1>视频拍摄发布流程图</h1>
@@ -158,53 +159,43 @@
         // 初始化加载主流程图
         window.onload = () => loadDiagram('main.puml');
 
-        // PlantUML 官方推荐的编码函数
+        // 使用 PlantUML 官方推荐的编码函数（修正版）
         function encodePlantUml(text) {
-            // 1. 压缩文本：移除所有空格和换行
-            let compressed = text.replace(/\s/g, '');
+            // PlantUML 官方编码函数
+            function encode6bit(b) {
+                if (b < 10) return String.fromCharCode(48 + b);
+                b -= 10;
+                if (b < 26) return String.fromCharCode(65 + b);
+                b -= 26;
+                if (b < 26) return String.fromCharCode(97 + b);
+                b -= 26;
+                if (b === 0) return '-';
+                if (b === 1) return '_';
+                return '?';
+            }
 
-            // 2. UTF-8 编码
-            let utf8Bytes = [];
-            for (let i = 0; i < compressed.length; i++) {
-                const charCode = compressed.charCodeAt(i);
-                if (charCode < 0x80) {
-                    utf8Bytes.push(charCode);
-                } else if (charCode < 0x800) {
-                    utf8Bytes.push(0xc0 | (charCode >> 6));
-                    utf8Bytes.push(0x80 | (charCode & 0x3f));
+            let r = "";
+            for (let i = 0; i < text.length; i += 3) {
+                if (i + 2 === text.length) {
+                    r += append3bytes(text.charCodeAt(i), text.charCodeAt(i + 1), 0);
+                } else if (i + 1 === text.length) {
+                    r += append3bytes(text.charCodeAt(i), 0, 0);
                 } else {
-                    utf8Bytes.push(0xe0 | (charCode >> 12));
-                    utf8Bytes.push(0x80 | ((charCode >> 6) & 0x3f));
-                    utf8Bytes.push(0x80 | (charCode & 0x3f));
+                    r += append3bytes(text.charCodeAt(i), text.charCodeAt(i + 1), text.charCodeAt(i + 2));
                 }
             }
+            return r;
 
-            // 3. 6位编码
-            const base64Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
-            let result = '';
-
-            for (let i = 0; i < utf8Bytes.length; i += 3) {
-                const byte1 = utf8Bytes[i];
-                const byte2 = i + 1 < utf8Bytes.length ? utf8Bytes[i + 1] : 0;
-                const byte3 = i + 2 < utf8Bytes.length ? utf8Bytes[i + 2] : 0;
-
-                const triplet = (byte1 << 16) | (byte2 << 8) | byte3;
-
-                result += base64Chars.charAt((triplet >> 18) & 0x3f);
-                result += base64Chars.charAt((triplet >> 12) & 0x3f);
-                result += base64Chars.charAt((triplet >> 6) & 0x3f);
-                result += base64Chars.charAt(triplet & 0x3f);
+            function append3bytes(b1, b2, b3) {
+                const c1 = b1 >> 2;
+                const c2 = ((b1 & 0x3) << 4) | (b2 >> 4);
+                const c3 = ((b2 & 0xF) << 2) | (b3 >> 6);
+                const c4 = b3 & 0x3F;
+                return encode6bit(c1 & 0x3F) +
+                    encode6bit(c2 & 0x3F) +
+                    encode6bit(c3 & 0x3F) +
+                    encode6bit(c4 & 0x3F);
             }
-
-            // 4. 添加填充
-            const padding = utf8Bytes.length % 3;
-            if (padding === 1) {
-                result = result.substring(0, result.length - 2) + '==';
-            } else if (padding === 2) {
-                result = result.substring(0, result.length - 1) + '=';
-            }
-
-            return result;
         }
 
         async function loadDiagram(pumlFile) {
@@ -221,7 +212,7 @@
                 const pumlContent = await response.text();
                 addDebugInfo(`文件内容加载成功 (${pumlContent.length} 字符)`);
 
-                // 使用官方编码方法
+                // 使用正确的编码方法
                 const encoded = encodePlantUml(pumlContent);
                 addDebugInfo(`编码完成 (${encoded.length} 字符)`);
 
@@ -238,38 +229,109 @@
                 // 设置超时检查
                 setTimeout(() => {
                     if (frame.contentDocument && frame.contentDocument.body.innerText.includes('bad URL')) {
-                        showError('PlantUML无法处理此文件，请检查PUML语法');
-                        addDebugInfo('检测到PlantUML错误响应');
+                        // 尝试备选方案
+                        addDebugInfo('检测到PlantUML错误响应，尝试备选方案');
+                        tryAlternativeMethod(pumlContent, frame);
                     }
                 }, 3000);
 
                 // 处理iframe加载错误
                 frame.onerror = () => {
-                    showError('加载流程图失败，请检查网络连接');
-                    addDebugInfo('iframe加载错误');
+                    addDebugInfo('iframe加载错误，尝试备选方案');
+                    tryAlternativeMethod(pumlContent, frame);
                 };
 
             } catch (error) {
                 console.error("加载错误:", error);
                 showError(`错误: ${error.message}`);
                 addDebugInfo(`错误: ${error.message}`);
-
-                // 显示原始内容供调试
-                const frame = document.getElementById('diagramFrame');
-                frame.srcdoc = `
-                    <html>
-                    <head><title>错误信息</title></head>
-                    <body style="padding:20px;font-family:Arial;">
-                        <h2>流程图加载失败</h2>
-                        <p>${error.message}</p>
-                        <h3>PlantUML原始内容:</h3>
-                        <pre style="background:#f0f0f0;padding:10px;overflow:auto;">${escapeHtml(pumlContent || '无内容')}</pre>
-                    </body>
-                    </html>
-                `;
+                displayErrorContent(pumlContent, error.message);
             } finally {
                 setTimeout(() => showLoading(false), 500);
             }
+        }
+
+        // 备选方案：当主方法失败时使用
+        function tryAlternativeMethod(pumlContent, frame) {
+            addDebugInfo('尝试备选方案：文本模式');
+            showError('主方法失败，尝试备选方案...');
+
+            // 方法1：使用文本模式
+            const textModeUrl = `https://www.plantuml.com/plantuml/svg/~0${encodeURIComponent(pumlContent)}`;
+            frame.src = textModeUrl + '?t=' + new Date().getTime();
+
+            // 设置二次检查
+            setTimeout(() => {
+                if (frame.contentDocument && frame.contentDocument.body.innerText.includes('bad URL')) {
+                    addDebugInfo('文本模式失败，尝试代理方法');
+
+                    // 方法2：使用代理服务
+                    const proxyUrl = `https://www.plantuml.com/plantuml/proxy?idx=0&src=${encodeURIComponent(pumlContent)}`;
+                    frame.src = proxyUrl;
+
+                    // 最终检查
+                    setTimeout(() => {
+                        if (frame.contentDocument && frame.contentDocument.body.innerText.includes('bad URL')) {
+                            showError('所有方法均失败，请检查PUML语法');
+                            displayErrorContent(pumlContent, '所有方法均失败');
+                        }
+                    }, 3000);
+                }
+            }, 3000);
+        }
+
+        // 显示错误内容
+        function displayErrorContent(pumlContent, errorMessage) {
+            const frame = document.getElementById('diagramFrame');
+            frame.srcdoc = `
+                <html>
+                <head>
+                    <title>错误信息</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; }
+                        .error { color: #d32f2f; }
+                        .content { 
+                            background: #f8f8f8; 
+                            border: 1px solid #e0e0e0; 
+                            padding: 15px; 
+                            margin-top: 15px;
+                            max-height: 400px;
+                            overflow: auto;
+                            white-space: pre-wrap;
+                            font-family: monospace;
+                        }
+                        .btn { 
+                            background: #4CAF50; 
+                            color: white; 
+                            border: none; 
+                            padding: 8px 15px; 
+                            margin: 5px; 
+                            cursor: pointer; 
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h2>流程图加载失败</h2>
+                    <p class="error">${errorMessage}</p>
+                    
+                    <button class="btn" onclick="location.reload()">重新加载</button>
+                    <button class="btn" onclick="copyContent()">复制内容</button>
+                    
+                    <h3>PlantUML原始内容:</h3>
+                    <div class="content">${escapeHtml(pumlContent || '无内容')}</div>
+                    
+                    <script>
+                        function copyContent() {
+                            const contentEl = document.querySelector('.content');
+                            const content = contentEl.textContent || contentEl.innerText;
+                            navigator.clipboard.writeText(content)
+                                .then(() => alert('内容已复制到剪贴板'))
+                                .catch(err => alert('复制失败: ' + err));
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `;
         }
 
         // 辅助函数：转义HTML
@@ -308,7 +370,6 @@
             `;
         });
     </script>
-
 </body>
 
 </html>
