@@ -8,6 +8,10 @@
             font-family: 'Microsoft YaHei', sans-serif;
             margin: 20px;
             background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
         }
 
         .nav {
@@ -16,6 +20,8 @@
             border-radius: 8px;
             margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1200px;
         }
 
         button {
@@ -37,14 +43,31 @@
         .container {
             display: flex;
             gap: 20px;
+            width: 100%;
+            max-width: 1200px;
         }
 
-        #diagramFrame {
-            flex: 3;
+        #diagramContainer {
+            position: relative;
+            overflow: auto;
             border: 1px solid #ddd;
             border-radius: 8px;
             background: white;
             min-height: 600px;
+            max-height: 75vh;
+            flex: 3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #svgContent {
+            transform-origin: center;
+            transition: transform 0.3s ease;
+            padding: 20px;
+            max-width: 100%;
+            max-height: 100%;
         }
 
         #debugPanel {
@@ -56,6 +79,7 @@
             font-size: 14px;
             overflow: auto;
             display: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         #loading {
@@ -79,6 +103,8 @@
             border-radius: 4px;
             margin-top: 10px;
             display: none;
+            width: 100%;
+            max-width: 1200px;
         }
 
         .debug-toggle {
@@ -90,9 +116,15 @@
             background: #5a6268;
         }
 
+        /* 新增缩放控制样式 */
         .zoom-controls {
-            margin: 10px 0;
+            margin: 10px 0 20px 0;
             text-align: center;
+            width: 100%;
+            max-width: 1200px;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
         }
 
         .zoom-btn {
@@ -110,30 +142,23 @@
             font-weight: bold;
         }
 
-        #diagramContainer {
-            position: relative;
-            overflow: auto;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: white;
-            min-height: 600px;
-            max-height: 80vh;
-        }
-
-        #svgContent {
-            transform-origin: top left;
-            transition: transform 0.3s ease;
+        .title-container {
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+            margin-bottom: 15px;
         }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
 </head>
 
 <body>
-    <h1>视频拍摄发布流程图</h1>
+    <div class="title-container">
+        <h1>视频拍摄发布流程图</h1>
+    </div>
 
     <div class="nav">
         <button onclick="loadDiagram('main.puml')">主流程</button>
-        <!-- 添加更多按钮 -->
         <button onclick="loadDiagram('script_ai.puml')">子流程-脚本编写AI</button>
         <button onclick="loadDiagram('script_upload.puml')">子流程-脚本上传</button>
         <button onclick="loadDiagram('scene_prep.puml')">子流程-布景准备</button>
@@ -151,6 +176,7 @@
         <span class="zoom-value" id="zoomValue">100%</span>
         <button class="zoom-btn" onclick="changeZoom(0.1)">+</button>
         <button onclick="resetZoom()" style="margin-left: 15px;">重置缩放</button>
+        <button onclick="toggleDebugPanel()" style="margin-left: 15px; background: #6c757d;">显示调试信息</button>
     </div>
 
     <div id="loading">
@@ -200,6 +226,12 @@
             debugContent.scrollTop = debugContent.scrollHeight;
         }
 
+        // 切换调试面板
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
         // 初始化加载主流程图
         window.onload = () => loadDiagram('main.puml');
 
@@ -212,6 +244,7 @@
             currentZoom = 1.0;
             document.getElementById('zoomValue').innerText = '100%';
             document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+            document.getElementById('svgContent').innerHTML = '';
 
             try {
                 // 1. 获取PUML文件内容
@@ -248,6 +281,15 @@
 
                 // 5. 显示SVG内容
                 document.getElementById('svgContent').innerHTML = svgContent;
+
+                // 6. 自动调整大小
+                setTimeout(() => {
+                    const svgElement = document.querySelector('#svgContent svg');
+                    if (svgElement) {
+                        svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                    }
+                }, 100);
+
                 showLoading(false);
 
             } catch (error) {
@@ -286,7 +328,7 @@
         function displayErrorContent(pumlContent, errorMessage) {
             const diagramContainer = document.getElementById('svgContent');
             diagramContainer.innerHTML = `
-                <div style="padding: 20px;">
+                <div style="padding: 20px; text-align: center;">
                     <h2>流程图加载失败</h2>
                     <p style="color: #d32f2f;">${errorMessage}</p>
                     
@@ -318,6 +360,7 @@
                         overflow: auto;
                         white-space: pre-wrap;
                         font-family: monospace;
+                        text-align: left;
                     ">${escapeHtml(pumlContent || '无内容')}</pre>
                 </div>
                 <script>
@@ -348,7 +391,7 @@
             const spinner = document.querySelector('.spinner');
             spinner.innerHTML = `
                 <style>
-                    .spinner { width: 40px; height: 40px; margin: 10px auto; }
+                    .spinner { width: 40px; height: 40px; margin: 10px auto; position: relative; }
                     .double-bounce1, .double-bounce2 {
                         width: 100%; height: 100%; border-radius: 50%;
                         background-color: #4CAF50; opacity: 0.6;
