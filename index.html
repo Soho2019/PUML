@@ -89,6 +89,41 @@
         .debug-toggle:hover {
             background: #5a6268;
         }
+
+        .zoom-controls {
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .zoom-btn {
+            background-color: #6c757d;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .zoom-value {
+            display: inline-block;
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        #diagramContainer {
+            position: relative;
+            overflow: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            min-height: 600px;
+            max-height: 80vh;
+        }
+
+        #svgContent {
+            transform-origin: top left;
+            transition: transform 0.3s ease;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
 </head>
@@ -110,6 +145,14 @@
         <button onclick="loadDiagram('publishing.puml')">子流程-视频上传发布</button>
     </div>
 
+    <!-- 添加缩放控制 -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="changeZoom(-0.1)">-</button>
+        <span class="zoom-value" id="zoomValue">100%</span>
+        <button class="zoom-btn" onclick="changeZoom(0.1)">+</button>
+        <button onclick="resetZoom()" style="margin-left: 15px;">重置缩放</button>
+    </div>
+
     <div id="loading">
         <h3>正在生成流程图...</h3>
         <p>这可能需要几秒钟时间</p>
@@ -119,7 +162,10 @@
     <div id="error" class="error"></div>
 
     <div class="container">
-        <iframe id="diagramFrame" title="流程图"></iframe>
+        <!-- 修改容器结构 -->
+        <div id="diagramContainer">
+            <div id="svgContent"></div>
+        </div>
         <div id="debugPanel">
             <h3>调试信息</h3>
             <div id="debugContent"></div>
@@ -127,6 +173,9 @@
     </div>
 
     <script>
+        // 全局变量
+        let currentZoom = 1.0;
+
         // 显示/隐藏加载指示器
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
@@ -159,6 +208,11 @@
             clearError();
             addDebugInfo(`开始加载: ${pumlFile}`);
 
+            // 重置缩放
+            currentZoom = 1.0;
+            document.getElementById('zoomValue').innerText = '100%';
+            document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+
             try {
                 // 1. 获取PUML文件内容
                 const response = await fetch(pumlFile);
@@ -176,33 +230,25 @@
 
                 // 3. 使用可靠的PlantUML渲染服务
                 const encoded = plantumlEncoder.encode(pumlContent);
-                const imageUrl = `https://www.plantuml.com/plantuml/svg/${encoded}`;
 
-                addDebugInfo(`生成渲染URL: ${imageUrl.substring(0, 80)}...`);
+                // 使用更可靠的渲染服务
+                const imageUrl = `https://kroki.io/plantuml/svg/${encoded}`;
+                // 备选服务: const imageUrl = `https://www.planttext.com/api/plantuml/svg/${encoded}`;
 
-                // 4. 在iframe中显示SVG
-                const frame = document.getElementById('diagramFrame');
-                frame.srcdoc = `
-                    <!DOCTYPE html>
-                    <html>
-                    <head>
-                        <style>
-                            body { margin: 0; }
-                            svg { width: 100%; height: 100%; }
-                        </style>
-                    </head>
-                    <body>
-                        <object type="image/svg+xml" data="${imageUrl}" style="width:100%;height:100%;">
-                            您的浏览器不支持SVG显示
-                        </object>
-                    </body>
-                    </html>
-                `;
+                addDebugInfo(`生成渲染URL: ${imageUrl}`);
 
-                // 5. 设置加载超时检查
-                setTimeout(() => {
-                    showLoading(false);
-                }, 2000);
+                // 4. 加载并显示SVG
+                const svgResponse = await fetch(imageUrl);
+                if (!svgResponse.ok) {
+                    throw new Error(`SVG渲染失败: HTTP ${svgResponse.status}`);
+                }
+
+                const svgContent = await svgResponse.text();
+                addDebugInfo(`SVG内容加载成功 (${svgContent.length} 字符)`);
+
+                // 5. 显示SVG内容
+                document.getElementById('svgContent').innerHTML = svgContent;
+                showLoading(false);
 
             } catch (error) {
                 console.error("加载错误:", error);
@@ -213,27 +259,115 @@
             }
         }
 
+        // 缩放控制函数
+        function changeZoom(delta) {
+            currentZoom += delta;
+
+            // 限制缩放范围
+            if (currentZoom < 0.3) currentZoom = 0.3;
+            if (currentZoom > 3.0) currentZoom = 3.0;
+
+            document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoomValue').innerText = `${Math.round(currentZoom * 100)}%`;
+        }
+
+        function resetZoom() {
+            currentZoom = 1.0;
+            document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoomValue').innerText = '100%';
+        }
+
         // 检查PUML文件是否有效
         function isValidPuml(content) {
             return content.includes('@startuml') && content.includes('@enduml');
         }
 
-        // 显示错误内容（保持不变）
+        // 显示错误内容
         function displayErrorContent(pumlContent, errorMessage) {
-            /* 原有实现保持不变 */
+            const diagramContainer = document.getElementById('svgContent');
+            diagramContainer.innerHTML = `
+                <div style="padding: 20px;">
+                    <h2>流程图加载失败</h2>
+                    <p style="color: #d32f2f;">${errorMessage}</p>
+                    
+                    <button onclick="location.reload()" style="
+                        background: #4CAF50; 
+                        color: white; 
+                        border: none; 
+                        padding: 8px 15px; 
+                        margin: 5px; 
+                        cursor: pointer;
+                    ">重新加载</button>
+                    
+                    <button onclick="copyContent()" style="
+                        background: #2196F3; 
+                        color: white; 
+                        border: none; 
+                        padding: 8px 15px; 
+                        margin: 5px; 
+                        cursor: pointer;
+                    ">复制内容</button>
+                    
+                    <h3>PlantUML原始内容:</h3>
+                    <pre style="
+                        background: #f8f8f8; 
+                        border: 1px solid #e0e0e0; 
+                        padding: 15px; 
+                        margin-top: 15px;
+                        max-height: 400px;
+                        overflow: auto;
+                        white-space: pre-wrap;
+                        font-family: monospace;
+                    ">${escapeHtml(pumlContent || '无内容')}</pre>
+                </div>
+                <script>
+                    function copyContent() {
+                        const contentEl = document.querySelector('pre');
+                        const content = contentEl.textContent || contentEl.innerText;
+                        navigator.clipboard.writeText(content)
+                            .then(() => alert('内容已复制到剪贴板'))
+                            .catch(err => alert('复制失败: ' + err));
+                    }
+                <\/script>
+            `;
         }
 
-        // 辅助函数：转义HTML（保持不变）
+        // 辅助函数：转义HTML
         function escapeHtml(unsafe) {
-            /* 原有实现保持不变 */
+            if (!unsafe) return '无内容';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
 
-        // 添加简单的加载动画（保持不变）
+        // 添加简单的加载动画
         document.addEventListener('DOMContentLoaded', () => {
-            /* 原有实现保持不变 */
+            const spinner = document.querySelector('.spinner');
+            spinner.innerHTML = `
+                <style>
+                    .spinner { width: 40px; height: 40px; margin: 10px auto; }
+                    .double-bounce1, .double-bounce2 {
+                        width: 100%; height: 100%; border-radius: 50%;
+                        background-color: #4CAF50; opacity: 0.6;
+                        position: absolute; top: 0; left: 0;
+                        animation: bounce 2.0s infinite ease-in-out;
+                    }
+                    .double-bounce2 { animation-delay: -1.0s; }
+                    @keyframes bounce {
+                        0%, 100% { transform: scale(0.0); }
+                        50% { transform: scale(1.0); }
+                    }
+                </style>
+                <div class="spinner">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div>
+            `;
         });
     </script>
-
 </body>
 
 </html>
