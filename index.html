@@ -3,7 +3,6 @@
 
 <head>
     <title>视频拍摄流程</title>
-    <!-- 使用本地实现的编码器 -->
     <script src="plantuml-encoder.js"></script>
     <style>
         iframe {
@@ -16,6 +15,8 @@
             margin: 15px;
             padding: 10px;
             background: #f5f5f5;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
 
         button {
@@ -26,6 +27,12 @@
             color: white;
             border: none;
             border-radius: 4px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
         }
 
         .loading {
@@ -34,7 +41,17 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 18px;
+            font-size: 20px;
+            color: #555;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .error {
+            color: #d32f2f;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -54,7 +71,8 @@
         <button onclick="loadDiagram('publishing.puml')">子流程-视频上传发布</button>
     </div>
 
-    <div id="loading" class="loading">加载中...</div>
+    <div id="loading" class="loading">正在生成流程图，请稍候...</div>
+    <div id="error" class="error"></div>
     <iframe id="diagramFrame" title="流程图"></iframe>
 
     <script>
@@ -63,17 +81,30 @@
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
 
+        // 显示错误信息
+        function showError(message) {
+            document.getElementById('error').innerText = message;
+        }
+
+        // 清除错误信息
+        function clearError() {
+            document.getElementById('error').innerText = '';
+        }
+
         // 初始化加载主流程图
         window.onload = () => loadDiagram('main.puml');
 
         async function loadDiagram(pumlFile) {
             const frame = document.getElementById('diagramFrame');
             showLoading(true);
+            clearError();
 
             try {
                 // 1. 获取PUML文件内容
                 const response = await fetch(pumlFile);
-                if (!response.ok) throw new Error(`文件 ${pumlFile} 加载失败`);
+                if (!response.ok) {
+                    throw new Error(`文件 ${pumlFile} 加载失败 (HTTP ${response.status})`);
+                }
 
                 // 2. 读取文本内容
                 const pumlContent = await response.text();
@@ -81,15 +112,57 @@
                 // 3. 使用本地编码器
                 const encoded = pumlEncoder.encode(pumlContent);
 
-                // 4. 生成正确URL
-                frame.src = `https://www.plantuml.com/plantuml/svg/~1${encoded}`;
+                // 4. 生成正确URL - 使用官方推荐的格式
+                const plantumlUrl = `https://www.plantuml.com/plantuml/svg/~1${encoded}`;
+
+                // 5. 创建临时iframe验证URL
+                const tempFrame = document.createElement('iframe');
+                tempFrame.style.display = 'none';
+                tempFrame.src = plantumlUrl;
+                document.body.appendChild(tempFrame);
+
+                // 检查加载状态
+                tempFrame.onload = () => {
+                    document.body.removeChild(tempFrame);
+                    frame.src = plantumlUrl;
+                    showLoading(false);
+                };
+
+                tempFrame.onerror = () => {
+                    document.body.removeChild(tempFrame);
+                    throw new Error('PlantUML服务器无法处理此流程图');
+                };
 
             } catch (error) {
                 console.error("加载错误:", error);
-                alert(`错误: ${error.message}\n请检查文件名`);
-            } finally {
+                showError(`错误: ${error.message}`);
                 showLoading(false);
+
+                // 显示原始内容供调试
+                frame.srcdoc = `
+                    <html>
+                    <head><title>错误信息</title></head>
+                    <body style="padding:20px;font-family:Arial;">
+                        <h2>流程图加载失败</h2>
+                        <p>${error.message}</p>
+                        <h3>PlantUML原始内容:</h3>
+                        <pre style="background:#f0f0f0;padding:10px;overflow:auto;">${escapeHtml(pumlContent || '无内容')}</pre>
+                    </body>
+                    </html>
+                `;
             }
+        }
+
+        // 辅助函数：转义HTML
+        function escapeHtml(unsafe) {
+            return unsafe
+                ? unsafe.toString()
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;")
+                : '';
         }
     </script>
 </body>
