@@ -1,0 +1,49 @@
+@startuml publishing.puml
+!include main.puml
+
+title 视频上传发布详细流程
+
+start
+
+:选择成员;
+note right: 负责人：视频上传发布负责人
+
+:准备发布素材;
+note: 视频文件、封面、描述等
+
+partition "发布准备" {
+  :匹配标签与关键词;
+  :选择发布时间;
+  note: 平台活跃时段
+  :选择封面图;
+  :检查画面清晰度;
+}
+
+:上传视频;
+:填写元数据;
+
+partition "发布检查" {
+  if (上传成功?) then (是)
+    :验证播放;
+  else (否)
+    :重新上传;
+  endif
+  
+  if (封面吸引眼球?) then (是)
+  else (否)
+    :更换封面;
+  endif
+  
+  if (符合平台调性?) then (是)
+  else (否)
+    :调整描述;
+  endif
+}
+
+:记录发布信息;
+:监控初始表现;
+:设置阶段完成时间;
+
+stop
+
+@enduml

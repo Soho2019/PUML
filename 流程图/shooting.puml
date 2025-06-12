@@ -1,0 +1,57 @@
+@startuml shooting.puml
+!include main.puml
+
+title 视频拍摄详细流程
+
+start
+
+:选择成员;
+note right: 负责人：视频拍摄负责人
+
+:按镜头顺序拍摄;
+
+partition "现场质量控制" {
+  :使用指向麦+备份录音;
+  :设置统一收音距离;
+  
+  repeat
+    :拍摄镜头;
+    :回放检查;
+    if (效果合格?) then (是)
+      :记录通过;
+    else (否)
+      :现场修正;
+    endif
+  repeat while (更多镜头?) is (是)
+  ->;
+  :结束拍摄;
+}
+
+partition "拍摄检查" {
+  if (画面稳定无抖动?) then (是)
+  else (否)
+    :重新拍摄;
+  endif
+  
+  if (色温合适?) then (是)
+  else (否)
+    :调整灯光;
+  endif
+  
+  if (无其他品牌logo?) then (是)
+  else (否)
+    :移除竞品元素;
+  endif
+  
+  if (操作流程真实?) then (是)
+  else (否)
+    :修正动作;
+  endif
+}
+
+:整理拍摄素材;
+:设置阶段完成时间;
+
+stop
+
+@enduml

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>流程图查看器</title>
+    <script src="https://cdn.jsdelivr.net/npm/puml-encoder@1.4.0/dist/puml-encoder.min.js"></script>
+    <style>
+        iframe {
+            border: none;
+            width: 100%;
+            height: 85vh;
+        }
+
+        .nav {
+            margin: 15px;
+        }
+
+        button {
+            margin: 5px;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nav">
+        <button onclick="loadDiagram('main.puml')">主流程</button>
+        <!-- 添加更多按钮 -->
+        <button onclick="loadDiagram('script_ai.puml')">子流程-脚本编写AI</button>
+        <button onclick="loadDiagram('script_upload.puml')">子流程-脚本上传</button>
+        <button onclick="loadDiagram('scene_prep.puml')">子流程-布景准备</button>
+        <button onclick="loadDiagram('shooting_prep.puml')">子流程-拍摄准备</button>
+        <button onclick="loadDiagram('shooting.puml')">子流程-视频拍摄</button>
+        <button onclick="loadDiagram('material_org.puml')">子流程-素材整理</button>
+        <button onclick="loadDiagram('editing.puml')">子流程-视频剪辑</button>
+        <button onclick="loadDiagram('approval.puml')">子流程-视频审批</button>
+        <button onclick="loadDiagram('publishing.puml')">子流程-视频上传发布</button>
+    </div>
+    <iframe id="diagramFrame"></iframe>
+
+    <script>
+        // 初始化加载主流程图
+        window.onload = () => loadDiagram('main.puml');
+
+        function loadDiagram(pumlFile) {
+            // 使用 PlantUML 官方渲染服务
+            const encoded = encodeURIComponent(pumlFile);
+            const frame = document.getElementById('diagramFrame');
+            frame.src = `https://www.plantuml.com/plantuml/svg/~1${encoded}`;
+        }
+    </script>
+</body>
+
+</html>

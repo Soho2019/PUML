@@ -1,0 +1,30 @@
+@startuml script_upload.puml
+!include main.puml
+
+title 脚本上传详细流程
+
+start
+
+:选择成员;
+note right: 负责人：脚本上传负责人
+
+:上传脚本文件;
+note: 支持多种文件格式
+
+partition "上传审核" {
+  :检查文件格式;
+  :验证内容完整性;
+  :确认版本号;
+}
+
+if (上传成功?) then (是)
+  :通知下一阶段负责人;
+else (否)
+  :重新上传;
+endif
+
+:记录上传时间;
+
+stop
+
+@enduml

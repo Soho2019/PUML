@@ -1,0 +1,50 @@
+@startuml editing.puml
+!include main.puml
+
+title 视频剪辑详细流程
+
+start
+
+:选择成员;
+note right: 负责人：视频剪辑负责人
+
+:导入素材;
+:粗剪视频结构;
+
+partition "精剪处理" {
+  :添加字幕;
+  note: 确保含关键词\n无横线/简化单词
+  :添加背景音乐;
+  :调色校正;
+  :添加转场效果;
+}
+
+partition "质量检查" {
+  if (信息表达清晰?) then (是)
+  else (否)
+    :调整剪辑节奏;
+  endif
+  
+  if (音乐不干扰主内容?) then (是)
+  else (否)
+    :调整音量平衡;
+  endif
+  
+  if (无广告嫌疑?) then (是)
+  else (否)
+    :修改敏感内容;
+  endif
+  
+  if (符合平台调性?) then (是)
+  else (否)
+    :调整内容风格;
+  endif
+}
+
+:添加片头片尾;
+:生成预览版本;
+:设置阶段完成时间;
+
+stop
+
+@enduml
