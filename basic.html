@@ -1,15 +1,416 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <title>Document</title>
+    <title>视频拍摄流程图</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 20px;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .nav {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        #diagramContainer {
+            position: relative;
+            overflow: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            min-height: 600px;
+            max-height: 75vh;
+            flex: 3;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #svgContent {
+            transform-origin: center;
+            transition: transform 0.3s ease;
+            padding: 20px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #debugPanel {
+            flex: 1;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 14px;
+            overflow: auto;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .debug-toggle {
+            background: #6c757d;
+            margin-top: 10px;
+        }
+
+        .debug-toggle:hover {
+            background: #5a6268;
+        }
+
+        /* 新增缩放控制样式 */
+        .zoom-controls {
+            margin: 10px 0 20px 0;
+            text-align: center;
+            width: 100%;
+            max-width: 1200px;
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .zoom-btn {
+            background-color: #6c757d;
+            width: 40px;
+            height: 40px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .zoom-value {
+            display: inline-block;
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .title-container {
+            width: 100%;
+            max-width: 1200px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/plantuml-encoder@1.4.0/dist/plantuml-encoder.min.js"></script>
 </head>
 
 <body>
-    <iframe id="embed_dom" name="embed_dom" frameborder="0"
-        style="display:block;margin-left:-244.5px; margin-top:-137.5px;width:489px; height:275px;"
-        src="https://www.processon.com/embed/686c8785645bef3b93c3f8bf?cid=686c8785645bef3b93c3f8c2"></iframe>
+    <div class="title-container">
+        <h1>视频拍摄发布流程图</h1>
+    </div>
+
+    <div class="nav">
+        <button onclick="loadDiagram('main.puml')">主流程</button>
+        <button onclick="loadDiagram('script_ai.puml')">子流程-脚本编写AI</button>
+        <button onclick="loadDiagram('script_upload.puml')">子流程-脚本上传</button>
+        <button onclick="loadDiagram('scene_prep.puml')">子流程-布景准备</button>
+        <button onclick="loadDiagram('shooting_prep.puml')">子流程-拍摄准备</button>
+        <button onclick="loadDiagram('shooting.puml')">子流程-视频拍摄</button>
+        <button onclick="loadDiagram('material_org.puml')">子流程-素材整理</button>
+        <button onclick="loadDiagram('editing.puml')">子流程-视频剪辑</button>
+        <button onclick="loadDiagram('approval.puml')">子流程-视频审批</button>
+        <button onclick="loadDiagram('publishing.puml')">子流程-视频上传发布</button>
+    </div>
+
+    <!-- 添加缩放控制 -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" onclick="changeZoom(-0.1)">-</button>
+        <span class="zoom-value" id="zoomValue">100%</span>
+        <button class="zoom-btn" onclick="changeZoom(0.1)">+</button>
+        <button onclick="resetZoom()" style="margin-left: 15px;">重置缩放</button>
+        <button onclick="toggleDebugPanel()" style="margin-left: 15px; background: #6c757d;">显示调试信息</button>
+    </div>
+
+    <div id="loading">
+        <h3>正在生成流程图...</h3>
+        <p>这可能需要几秒钟时间</p>
+        <div class="spinner"></div>
+    </div>
+
+    <div id="error" class="error"></div>
+
+    <div class="container">
+        <!-- 修改容器结构 -->
+        <div id="diagramContainer">
+            <div id="svgContent"></div>
+        </div>
+        <div id="debugPanel">
+            <h3>调试信息</h3>
+            <div id="debugContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentZoom = 1.0;
+
+        // 显示/隐藏加载指示器
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.innerText = message;
+            errorDiv.style.display = 'block';
+        }
+
+        // 清除错误信息
+        function clearError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        // 添加调试信息
+        function addDebugInfo(info) {
+            const debugContent = document.getElementById('debugContent');
+            debugContent.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${info}</div>`;
+            debugContent.scrollTop = debugContent.scrollHeight;
+        }
+
+        // 切换调试面板
+        function toggleDebugPanel() {
+            const panel = document.getElementById('debugPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        // 初始化加载主流程图
+        window.onload = () => loadDiagram('main.puml');
+
+        async function loadDiagram(pumlFile) {
+            showLoading(true);
+            clearError();
+            addDebugInfo(`开始加载: ${pumlFile}`);
+
+            // 重置缩放
+            currentZoom = 1.0;
+            document.getElementById('zoomValue').innerText = '100%';
+            document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+            document.getElementById('svgContent').innerHTML = '';
+
+            try {
+                // 1. 获取PUML文件内容
+                const response = await fetch(pumlFile);
+                if (!response.ok) {
+                    throw new Error(`文件加载失败: HTTP ${response.status}`);
+                }
+
+                const pumlContent = await response.text();
+                addDebugInfo(`文件内容加载成功 (${pumlContent.length} 字符)`);
+
+                // 2. 检查PUML文件有效性
+                if (!isValidPuml(pumlContent)) {
+                    throw new Error('PUML文件格式无效');
+                }
+
+                // 3. 使用可靠的PlantUML渲染服务
+                const encoded = plantumlEncoder.encode(pumlContent);
+
+                // 使用更可靠的渲染服务
+                const imageUrl = `https://kroki.io/plantuml/svg/${encoded}`;
+                // 备选服务: const imageUrl = `https://www.planttext.com/api/plantuml/svg/${encoded}`;
+
+                addDebugInfo(`生成渲染URL: ${imageUrl}`);
+
+                // 4. 加载并显示SVG
+                const svgResponse = await fetch(imageUrl);
+                if (!svgResponse.ok) {
+                    throw new Error(`SVG渲染失败: HTTP ${svgResponse.status}`);
+                }
+
+                const svgContent = await svgResponse.text();
+                addDebugInfo(`SVG内容加载成功 (${svgContent.length} 字符)`);
+
+                // 5. 显示SVG内容
+                document.getElementById('svgContent').innerHTML = svgContent;
+
+                // 6. 自动调整大小
+                setTimeout(() => {
+                    const svgElement = document.querySelector('#svgContent svg');
+                    if (svgElement) {
+                        svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                    }
+                }, 100);
+
+                showLoading(false);
+
+            } catch (error) {
+                console.error("加载错误:", error);
+                showError(`错误: ${error.message}`);
+                addDebugInfo(`错误: ${error.message}`);
+                displayErrorContent(pumlContent, error.message);
+                showLoading(false);
+            }
+        }
+
+        // 缩放控制函数
+        function changeZoom(delta) {
+            currentZoom += delta;
+
+            // 限制缩放范围
+            if (currentZoom < 0.3) currentZoom = 0.3;
+            if (currentZoom > 3.0) currentZoom = 3.0;
+
+            document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoomValue').innerText = `${Math.round(currentZoom * 100)}%`;
+        }
+
+        function resetZoom() {
+            currentZoom = 1.0;
+            document.getElementById('svgContent').style.transform = `scale(${currentZoom})`;
+            document.getElementById('zoomValue').innerText = '100%';
+        }
+
+        // 检查PUML文件是否有效
+        function isValidPuml(content) {
+            return content.includes('@startuml') && content.includes('@enduml');
+        }
+
+        // 显示错误内容
+        function displayErrorContent(pumlContent, errorMessage) {
+            const diagramContainer = document.getElementById('svgContent');
+            diagramContainer.innerHTML = `
+                <div style="padding: 20px; text-align: center;">
+                    <h2>流程图加载失败</h2>
+                    <p style="color: #d32f2f;">${errorMessage}</p>
+                    
+                    <button onclick="location.reload()" style="
+                        background: #4CAF50; 
+                        color: white; 
+                        border: none; 
+                        padding: 8px 15px; 
+                        margin: 5px; 
+                        cursor: pointer;
+                    ">重新加载</button>
+                    
+                    <button onclick="copyContent()" style="
+                        background: #2196F3; 
+                        color: white; 
+                        border: none; 
+                        padding: 8px 15px; 
+                        margin: 5px; 
+                        cursor: pointer;
+                    ">复制内容</button>
+                    
+                    <h3>PlantUML原始内容:</h3>
+                    <pre style="
+                        background: #f8f8f8; 
+                        border: 1px solid #e0e0e0; 
+                        padding: 15px; 
+                        margin-top: 15px;
+                        max-height: 400px;
+                        overflow: auto;
+                        white-space: pre-wrap;
+                        font-family: monospace;
+                        text-align: left;
+                    ">${escapeHtml(pumlContent || '无内容')}</pre>
+                </div>
+                <script>
+                    function copyContent() {
+                        const contentEl = document.querySelector('pre');
+                        const content = contentEl.textContent || contentEl.innerText;
+                        navigator.clipboard.writeText(content)
+                            .then(() => alert('内容已复制到剪贴板'))
+                            .catch(err => alert('复制失败: ' + err));
+                    }
+                <\/script>
+            `;
+        }
+
+        // 辅助函数：转义HTML
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '无内容';
+            return unsafe.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // 添加简单的加载动画
+        document.addEventListener('DOMContentLoaded', () => {
+            const spinner = document.querySelector('.spinner');
+            spinner.innerHTML = `
+                <style>
+                    .spinner { width: 40px; height: 40px; margin: 10px auto; position: relative; }
+                    .double-bounce1, .double-bounce2 {
+                        width: 100%; height: 100%; border-radius: 50%;
+                        background-color: #4CAF50; opacity: 0.6;
+                        position: absolute; top: 0; left: 0;
+                        animation: bounce 2.0s infinite ease-in-out;
+                    }
+                    .double-bounce2 { animation-delay: -1.0s; }
+                    @keyframes bounce {
+                        0%, 100% { transform: scale(0.0); }
+                        50% { transform: scale(1.0); }
+                    }
+                </style>
+                <div class="spinner">
+                    <div class="double-bounce1"></div>
+                    <div class="double-bounce2"></div>
+                </div>
+            `;
+        });
+    </script>
 </body>
 
 </html>
